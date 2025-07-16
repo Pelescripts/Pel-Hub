@@ -1,0 +1,207 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Criar GUI
+local gui = Instance.new("ScreenGui", StarterGui)
+gui.Name = "PeléHub"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 260, 0, 370)
+frame.Position = UDim2.new(0.5, -130, 0.5, -185)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "Pelé Hub V1 👑"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 24
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+
+-- Minimizar com botão redondo
+local minimizeButton = Instance.new("TextButton", frame)
+minimizeButton.Size = UDim2.new(0, 35, 0, 30)
+minimizeButton.Position = UDim2.new(1, -40, 0, 5)
+minimizeButton.Text = "_"
+minimizeButton.Font = Enum.Font.SourceSansBold
+minimizeButton.TextSize = 18
+minimizeButton.TextColor3 = Color3.new(1,1,1)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(80,80,80)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    frame.Visible = false
+
+    local restoreBtn = Instance.new("TextButton", gui)
+    restoreBtn.Size = UDim2.new(0, 50, 0, 50)
+    restoreBtn.Position = UDim2.new(0, 35, 0, 35)
+    restoreBtn.Text = "👑"
+    restoreBtn.Font = Enum.Font.SourceSansBold
+    restoreBtn.TextSize = 24
+    restoreBtn.TextColor3 = Color3.new(1,1,1)
+    restoreBtn.BackgroundColor3 = Color3.fromRGB(0,128,255)
+    restoreBtn.BorderSizePixel = 0
+
+    local round = Instance.new("UICorner", restoreBtn)
+    round.CornerRadius = UDim.new(0, 999)
+
+    -- Drag do botão flutuante
+    local dragging, dragInput, mousePos, framePos
+    restoreBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            mousePos = input.Position
+            framePos = restoreBtn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    restoreBtn.InputChanged:Connect(function(input)
+        dragInput = input
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - mousePos
+            restoreBtn.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+        end
+    end)
+
+    restoreBtn.MouseButton1Click:Connect(function()
+        frame.Visible = true
+        restoreBtn:Destroy()
+    end)
+end)
+
+-- Drag do Hub principal
+local draggingMain, dragInputMain, mousePosMain, framePosMain
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        draggingMain = true
+        mousePosMain = input.Position
+        framePosMain = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then draggingMain = false end
+        end)
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    dragInputMain = input
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if draggingMain and input == dragInputMain then
+        local delta = input.Position - mousePosMain
+        frame.Position = UDim2.new(framePosMain.X.Scale, framePosMain.X.Offset + delta.X, framePosMain.Y.Scale, framePosMain.Y.Offset + delta.Y)
+    end
+end)
+
+-- Botão generator
+local y = 45
+local function createToggle(name, callback)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(0, 220, 0, 35)
+    btn.Position = UDim2.new(0, 20, 0, y)
+    btn.Text = name .. " [OFF]"
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 20
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    y = y + 40
+
+    local active = false
+    btn.MouseButton1Click:Connect(function()
+        active = not active
+        btn.Text = name .. " [" .. (active and "ON" or "OFF") .. "]"
+        btn.BackgroundColor3 = active and Color3.fromRGB(0,255,128) or Color3.fromRGB(255,0,0)
+        callback(active)
+    end)
+end
+
+-- Funções
+createToggle("GodMode", function(state)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.Health = math.huge
+        if state then
+            hum:GetPropertyChangedSignal("Health"):Connect(function()
+                if hum.Health < math.huge then hum.Health = math.huge end
+            end)
+        end
+    end
+end)
+
+createToggle("Infinitejump", function(state)
+    if state then
+        UserInputService.JumpRequest:Connect(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
+end)
+
+local noclipConn = nil
+createToggle("NoClip", function(state)
+    if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+    if state then
+        noclipConn = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanCollide = false end
+                end
+            end
+        end)
+    end
+end)
+
+createToggle("Velocidade", function(state)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = state and 100 or 16 end
+end)
+
+createToggle("ESP", function(state)
+    for _,player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            if state then
+                if not char:FindFirstChild("ESP_H") then
+                    local h = Instance.new("Highlight", char)
+                    h.Name = "ESP_H"
+                    h.FillColor = Color3.fromRGB(255,0,0)
+                    h.OutlineColor = h.FillColor
+                    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                end
+                local head = char:FindFirstChild("Head")
+                if head and not head:FindFirstChild("ESP_Tag") then
+                    local tag = Instance.new("BillboardGui", head)
+                    tag.Name = "ESP_Tag"
+                    tag.Size = UDim2.new(0,200,0,25)
+                    tag.Adornee = head
+                    tag.AlwaysOnTop = true
+                    tag.StudsOffset = Vector3.new(0,2,0)
+                    local label = Instance.new("TextLabel", tag)
+                    label.Size = UDim2.new(1,0,1,0)
+                    label.BackgroundTransparency = 1
+                    label.Text = player.Name
+                    label.TextColor3 = Color3.fromRGB(255,0,0)
+                    label.Font = Enum.Font.SourceSansBold
+                    label.TextSize = 16
+                end
+            else
+                local h = char:FindFirstChild("ESP_H") if h then h:Destroy() end
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local tag = head:FindFirstChild("ESP_Tag") if tag then tag:Destroy() end
+                end
+            end
+        end
+    end
+end)
