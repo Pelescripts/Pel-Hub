@@ -1,0 +1,322 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local gui = Instance.new("ScreenGui", StarterGui)
+gui.Name = "PeléHub"
+gui.ResetOnSpawn = false
+
+local frame = Instance.new("ScrollingFrame", gui)
+frame.Size = UDim2.new(0, 260, 0, 370)
+frame.Position = UDim2.new(0.5, -130, 0.5, -185)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BorderSizePixel = 0
+frame.ScrollBarThickness = 6
+frame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+frame.ScrollingDirection = Enum.ScrollingDirection.Y
+frame.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+frame.ClipsDescendants = true
+
+-- 🌈 Borda animada rainbow
+local stroke = Instance.new("UIStroke", frame)
+stroke.Thickness = 3
+stroke.Transparency = 0
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 12)
+
+local rainbowColors = {
+    Color3.fromRGB(255,0,0), Color3.fromRGB(255,127,0),
+    Color3.fromRGB(255,255,0), Color3.fromRGB(0,255,0),
+    Color3.fromRGB(0,255,255), Color3.fromRGB(0,0,255),
+    Color3.fromRGB(139,0,255), Color3.fromRGB(255,0,127),
+}
+local idx = 1
+task.spawn(function()
+    while true do
+        stroke.Color = rainbowColors[idx]
+        idx = idx % #rainbowColors + 1
+        wait(0.1)
+    end
+end)
+
+-- Título
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "Pelé Hub V1.5 👑"
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 24
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+title.Position = UDim2.new(0, 0, 0, 0)
+
+-- Área de arraste
+local dragArea = Instance.new("Frame", frame)
+dragArea.Size = UDim2.new(1, -40, 0, 40)
+dragArea.Position = UDim2.new(0, 0, 0, 0)
+dragArea.BackgroundTransparency = 1
+dragArea.ZIndex = 2
+
+local dragging, dragInput, mousePos, framePos
+dragArea.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        mousePos = input.Position
+        framePos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+dragArea.InputChanged:Connect(function(input) dragInput = input end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - mousePos
+        frame.Position = UDim2.new(
+            framePos.X.Scale, framePos.X.Offset + delta.X,
+            framePos.Y.Scale, framePos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Minimizar
+local minimizeButton = Instance.new("TextButton", frame)
+minimizeButton.Size = UDim2.new(0, 35, 0, 30)
+minimizeButton.Position = UDim2.new(1, -40, 0, 5)
+minimizeButton.Text = "_"
+minimizeButton.Font = Enum.Font.SourceSansBold
+minimizeButton.TextSize = 18
+minimizeButton.TextColor3 = Color3.new(1,1,1)
+minimizeButton.BackgroundColor3 = Color3.fromRGB(80,80,80)
+
+minimizeButton.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    local restoreBtn = Instance.new("TextButton", gui)
+    restoreBtn.Size = UDim2.new(0, 50, 0, 50)
+    restoreBtn.Position = UDim2.new(0, 35, 0, 35)
+    restoreBtn.Text = "👑"
+    restoreBtn.Font = Enum.Font.SourceSansBold
+    restoreBtn.TextSize = 24
+    restoreBtn.TextColor3 = Color3.new(1,1,1)
+    restoreBtn.BackgroundColor3 = Color3.fromRGB(0,128,255)
+    restoreBtn.BorderSizePixel = 0
+    Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(0, 999)
+
+    local dragging, dragInput, mousePos, framePos
+    restoreBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            mousePos = input.Position
+            framePos = restoreBtn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    restoreBtn.InputChanged:Connect(function(input) dragInput = input end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input == dragInput then
+            local delta = input.Position - mousePos
+            restoreBtn.Position = UDim2.new(
+                framePos.X.Scale, framePos.X.Offset + delta.X,
+                framePos.Y.Scale, framePos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    restoreBtn.MouseButton1Click:Connect(function()
+        frame.Visible = true
+        restoreBtn:Destroy()
+    end)
+end)
+
+-- 🔘 Botões interativos
+local y = 45
+local function createToggle(name, callback)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(0, 220, 0, 35)
+    btn.Position = UDim2.new(0, 20, 0, y)
+    btn.Text = name .. " [OFF]"
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 20
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.BackgroundColor3 = Color3.fromRGB(255,0,0)
+    y = y + 40
+
+    local active = false
+    btn.MouseButton1Click:Connect(function()
+        active = not active
+        btn.Text = name .. " [" .. (active and "ON" or "OFF") .. "]"
+        btn.BackgroundColor3 = active and Color3.fromRGB(0,255,128) or Color3.fromRGB(255,0,0)
+        callback(active)
+    end)
+end
+
+-- 💥 GodMode com reversão
+local godConnection = nil
+createToggle("GodMode", function(state)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.Health = math.huge
+        if state then
+            godConnection = hum:GetPropertyChangedSignal("Health"):Connect(function()
+                if hum.Health < math.huge then hum.Health = math.huge end
+            end)
+        else
+            if godConnection then godConnection:Disconnect() end
+            hum.Health = 100
+        end
+    end
+end)
+
+-- 🚀 Infinitejump
+createToggle("Infinitejump", function(state)
+    if state then
+        UserInputService.JumpRequest:Connect(function()
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+        end)
+    end
+end)
+
+-- 👻 NoClip com reversão
+local noclipConn = nil
+createToggle("NoClip", function(state)
+    if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
+    if state then
+        noclipConn = RunService.Stepped:Connect(function()
+            if LocalPlayer.Character then
+                for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if v:IsA("BasePart") then v.CanCollide = false end
+                end
+            end
+        end)
+    else
+        if LocalPlayer.Character then
+            for _,v in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = true end
+            end
+        end
+    end
+end)
+
+-- 🏃 Velocidade
+createToggle("Velocidade", function(state)
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = state and 100 or 16 end
+end)
+
+-- 🧠 ESP
+createToggle("ESP", function(state)
+    for _,player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local char = player.Character
+            if state then
+                if not char:FindFirstChild("ESP_H") then
+                    local h = Instance.new("Highlight", char)
+                    h.Name = "ESP_H"
+                    h.FillColor = Color3.fromRGB(255,0,0)
+                    h.OutlineColor = h.FillColor
+                    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                end
+                local head = char:FindFirstChild("Head")
+                if head and not head:FindFirstChild("ESP_Tag") then
+                    local tag = Instance.new("BillboardGui", head)
+                    tag.Name = "ESP_Tag"
+                    tag.Size = UDim2.new(0,200,0,25)
+                    tag.Adornee = head
+                    tag.AlwaysOnTop = true
+                    tag.StudsOffset = Vector3.new(0,2,0)
+                    local label = Instance.new("TextLabel", tag)
+                    label.Size = UDim2.new(1,0,1,0)
+                    label.BackgroundTransparency = 1
+                    label.Text = player.Name
+                    label.TextColor3 = Color3.fromRGB(255,0,0)
+                    label.Font = Enum.Font.SourceSansBold
+                    label.TextSize = 16
+                end
+            else
+                local h = char:FindFirstChild("ESP_H") if h then h:Destroy() end
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local tag = head:FindFirstChild("ESP_Tag") if tag then tag:Destroy() end
+                end
+            end
+        end
+    end
+end)
+
+-- 🎚️ Slider de transparência do fundo
+local transparencyLabel = Instance.new("TextLabel", frame)
+transparencyLabel.Size = UDim2.new(0, 220, 0, 20)
+transparencyLabel.Position = UDim2.new(0, 20, 0, y + 5)
+transparencyLabel.Text = "Transparência: 30%"
+transparencyLabel.Font = Enum.Font.SourceSans
+transparencyLabel.TextSize = 16
+transparencyLabel.TextColor3 = Color3.new(1,1,1)
+transparencyLabel.BackgroundTransparency = 1
+transparencyLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local transparencySlider = Instance.new("TextButton", frame)
+transparencySlider.Size = UDim2.new(0, 220, 0, 20)
+transparencySlider.Position = UDim2.new(0, 20, 0, y + 30)
+transparencySlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+transparencySlider.Text = ""
+transparencySlider.AutoButtonColor = false
+transparencySlider.BorderSizePixel = 0
+
+local sliderFill = Instance.new("Frame", transparencySlider)
+sliderFill.BackgroundColor3 = Color3.fromRGB(0,255,128)
+sliderFill.Size = UDim2.new(0.3, 0, 1, 0)
+sliderFill.Position = UDim2.new(0, 0, 0, 0)
+sliderFill.BorderSizePixel = 0
+
+Instance.new("UICorner", transparencySlider).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(0, 6)
+
+local function updateTransparency(inputPos)
+    local rel = (inputPos.X - transparencySlider.AbsolutePosition.X) / transparencySlider.AbsoluteSize.X
+    rel = math.clamp(rel, 0, 1)
+    sliderFill.Size = UDim2.new(rel, 0, 1, 0)
+    local percent = math.floor(rel * 100)
+    frame.BackgroundTransparency = rel
+    transparencyLabel.Text = "Transparência: " .. percent .. "%"
+end
+
+transparencySlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        updateTransparency(input.Position)
+    end
+end)
+
+transparencySlider.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        transparencySlider.InputBegan:Connect(function(input2)
+            if input2.UserInputType == Enum.UserInputType.MouseButton1 or input2.UserInputType == Enum.UserInputType.Touch then
+                local moveConnection
+                moveConnection = UserInputService.InputChanged:Connect(function(moveInput)
+                    if moveInput == input2 then updateTransparency(moveInput.Position) end
+                end)
+                input2.Changed:Connect(function()
+                    if input2.UserInputState == Enum.UserInputState.End then
+                        if moveConnection then moveConnection:Disconnect() end
+                    end
+                end)
+            end
+        end)
+    end
+end)
+
+-- 🖊️ Créditos no rodapé
+local credit = Instance.new("TextLabel", frame)
+credit.Size = UDim2.new(1, 0, 0, 20)
+credit.Position = UDim2.new(0, 0, 1, -25)
+credit.Text = "Script by Lucas."
+credit.Font = Enum.Font.SourceSansItalic
+credit.TextSize = 14
+credit.TextColor3 = Color3.fromRGB(180, 180, 180)
+credit.BackgroundTransparency = 1
+credit.TextStrokeTransparency = 0.8
+credit.TextXAlignment = Enum.TextXAlignment.Center
